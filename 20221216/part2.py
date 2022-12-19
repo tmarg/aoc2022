@@ -1,5 +1,5 @@
 import sys
-from queue import Queue
+from queue import LifoQueue
 from part1 import graph
 
 def main(input):
@@ -11,9 +11,9 @@ def main(input):
     currentNode2 = 'AA'
     path1 = ['AA']
     path2 = ['AA']
-    queue = Queue()
+    queue = LifoQueue()
     bestScore = 0
-    bestPaths = None
+    bestPaths = [path2, path2]
     #[[Room1, Room2], [path1], [path2], set(opened), time, score, outstandingValue]
     #path = [room label or 'open']
     queue.put([['AA', 'AA'], path1, path2, set(), 26, 0, totalValue])
@@ -35,19 +35,25 @@ def main(input):
         possibleScore = 0
         outstandingValue = state[6]
         i = 0
-        if poss1 or poss2:
-            tt = time
-        else:
-            tt = time - 1
-        for t in range(tt - 1, 0, -2):
-            if i < (len(outstandingValue)):
-                possibleScore += t * outstandingValue[i]
-            if i + 1 < len(outstandingValue) and (poss1 and poss2):
-                possibleScore += t * outstandingValue[i + 1]
+        for t in range(time - 1, 0, -2):
+            if i < len(outstandingValue) - 1:
+                if poss1 and poss2:
+                    possibleScore += t * (outstandingValue[i] + outstandingValue[i + 1])
+                elif poss1 or poss2 and (poss1 != poss2):
+                    possibleScore += t * outstandingValue[i] + (t-1) * outstandingValue[i+1]
+                else:
+                    possibleScore += (t-1) * (outstandingValue[i] + outstandingValue[i + 1])
+                i += 2
+            elif i < len(outstandingValue) and (poss1 or poss2):
+                possibleScore += t * (outstandingValue[i])
+                i += 1
+            elif i < len(outstandingValue):
+                possibleScore += (t-1)*(outstandingValue[i])
+                i += 1
 
         if score > bestScore:
             bestScore = score
-            bestPath = (path1, path2)
+            bestPaths = (path1, path2)
             print(score)
             print(path1)
             print(path2)
@@ -55,7 +61,7 @@ def main(input):
             #print(time)
         exs1 = nodes[label1][1]
         exs2 = nodes[label2][1]
-        if time > 1 and len(state[3]) < valveCount and score + possibleScore > bestScore:
+        if time > 1 and len(state[3]) < valveCount and score + possibleScore > bestScore:   
             options1 = []
             options2 = []
             if valveStatus1 == False and valveValue1 > 0:
@@ -65,11 +71,11 @@ def main(input):
             for ex in exs1:
                 #only visit room if we haven't been there or we've opened a valve since being there before
                 rev1 = list(reversed(path1))
-                if path1.count(ex) == 0 or (path1.count('open') >= 1 and rev1.index('open') < rev1.index(ex)) and rev1[rev1.index('open') + 1] != ex:
+                if path1.count(ex) == 0 or ((path1.count('open') >= 1 and rev1.index('open') < rev1.index(ex)) and rev1[rev1.index('open') + 1] != ex):
                     options1.append(ex)
             for ex in exs2:
                 rev2 = list(reversed(path2))
-                if path2.count(ex) == 0 or (path2.count('open') >= 1 and rev2.index('open') < rev2.index(ex)) and rev2[rev2.index('open') + 1] != ex:
+                if path2.count(ex) == 0 or ((path2.count('open') >= 1 and rev2.index('open') < rev2.index(ex)) and rev2[rev2.index('open') + 1] != ex):
                     options2.append(ex)
             statusChoices = []
             if len(options1) == 0:
@@ -78,13 +84,11 @@ def main(input):
                 options2.append(label2)
             for option1 in options1:
                 for option2 in options2:
-                    newpath1 = path1.copy()
-                    newpath2 = path2.copy()
+                    newpath1 = path1 + [option1]
+                    newpath2 = path2 + [option2]
                     newOV = outstandingValue.copy()
                     newOpened = opened.copy()
                     newScore = score
-                    newpath1 += [option1]
-                    newpath2 += [option2]
                     if option1 == 'open':
                         newOV.remove(valveValue1)
                         newOpened.add(label1)
@@ -98,7 +102,7 @@ def main(input):
                     statusChoices.append(([option1, option2], newpath1, newpath2, newOpened, time - 1,  newScore, newOV))
             for choice in statusChoices:
                 queue.put(choice)
-    return (bestScore, bestPath)
+    return (bestScore, bestPaths)
 
 if __name__ == "__main__":
     print(main(sys.argv[1]))
